@@ -1,7 +1,7 @@
 ##
 
 # Dreissenid Correlates Review R Script
-# Date: Sept 28 2021
+# Date: Oct 24 2022
 # Author: Steven Brownlee
 # Email: sbrownle@sfu.ca
 
@@ -13,8 +13,8 @@
 
 # 1.) Install packages as needed, load library:
 
-#install.packages('revtools')
-#install.packages('tidyverse')
+#install.packages(c('revtools','tidyverse')
+
 
 library(revtools)
 library(tidyverse)
@@ -26,41 +26,48 @@ library(tidyverse)
 # Search terms: (mussel* AND (dreissen* OR zebra OR quagga) AND (invas* OR non-native OR introduc*))
 # AND (habitat OR environment* OR niche) AND (suitability OR requirement* OR limit*)
 
-# Web of Science search, May 24 2021:
+setwd("./literature_review")
 
-WoS_01 <- read_bibliography('wos_search_2021.bib')
+# Web of Science search, Oct 24 2022:
 
-# write.csv(WoS_01, 'WoS_01.csv')
+wos_a <- read_bibliography('wos_search_2022.bib')
 
-# ASFA search, May 24 2021: 
+wos_a <- wos_a %>% select(title, abstract, author)
 
-ASFA_a <- read_bibliography('asfa_search_2021_a.ris')
-ASFA_b <- read_bibliography('asfa_search_2021_b.ris')
-ASFA_c <- read_bibliography('asfa_search_2021_c.ris')
-ASFA_d <- read_bibliography('asfa_search_2021_d.ris')
+# ASFA search, Oct 24 2022: 
 
-ASFA_comb <- rbind(ASFA_a, ASFA_b, ASFA_c, ASFA_d)
+asfa_a <- read_bibliography('asfa_search_2022_a.ris')
+asfa_b <- read_bibliography('asfa_search_2022_b.ris')
+asfa_c <- read_bibliography('asfa_search_2022_c.ris')
+asfa_d <- read_bibliography('asfa_search_2022_d.ris')
+asfa_e <- read_bibliography('asfa_search_2022_e.ris')
 
-# write.csv(ASFA_01_comb, 'ASFA_01.csv')
+asfa_a <- asfa_a %>% select(title, abstract, author)
+asfa_b <- asfa_b %>% select(title, abstract, author)
+asfa_c <- asfa_c %>% select(title, abstract, author)
+asfa_d <- asfa_d %>% select(title, abstract, author)
+asfa_e <- asfa_e %>% select(title, abstract, author)
+
+search_comb <- rbind(asfa_a, asfa_b, asfa_c, asfa_d, asfa_e, wos_a)
 
 # 3.) Identify and remove duplicates based on title:
 
-WoS_match <- find_duplicates(WoS_01, match_variable = "title", group_variables = NULL, match_function = "fuzzdist",
-                             method = "fuzz_m_ratio", threshold = 0.1, to_lower = TRUE, remove_punctuation = FALSE)
-ASFA_match <- find_duplicates(ASFA_comb, match_variable = "title", group_variables = NULL, match_function = "fuzzdist",
-                              method = "fuzz_m_ratio", threshold = 0.1, to_lower = TRUE, remove_punctuation = FALSE)
+search_match <- find_duplicates(search_comb, 
+                                match_variable = "title", 
+                                group_variables = NULL, 
+                                match_function = "fuzzdist",
+                                method = "fuzz_m_ratio", 
+                                threshold = 0.1, 
+                                to_lower = TRUE, 
+                                remove_punctuation = FALSE)
 
-WoS_unique_2021 <- extract_unique_references(WoS_01, WoS_match)
-ASFA_unique_2021 <- extract_unique_references(ASFA_comb, ASFA_match)
+search_unique <- extract_unique_references(search_comb, search_match)
 
-# save(WoS_unique_2021, file = "WoS_unique.rData")
+# Since duplication matching process is time intensive, may want to write
+# out results:
 
-# save(ASFA_unique_2021, file = "ASFA_unique.rData")
-
-setwd()
-
-load("WoS_unique_2021.rData")
-load("ASFA_unique_2021.rData")
+#write_bibliography(search_unique, 'search_unique.bib', format = 'bib')
+#search_unique <- read_bibliography('search_unique.bib')
 
 # 4.) Screen titles and abstracts using 'revtools' GUI:
 
@@ -76,56 +83,20 @@ load("ASFA_unique_2021.rData")
 
 #
 
-setwd('/home/sbrownlee/mnt/10TB/NCA/SFU/AA - Dreissenid Literature Review Github Repository/Dreissenid_Literature_Review')
+# Screen by title and filter by excluded, as assessed by the criteria above.
 
-WoS_title_screened <- screen_titles(WoS_unique) 
+search_title_screened <- screen_titles(search_unique) 
 
-#write_bibliography(WoS_title_screened, 'WoS_title_screened_2021.bib', format = 'bib')
+search_title_screened_subset <- search_title_screened[search_title_screened$screened_titles != 'excluded',]
 
-WoS_title_screened <- read_bibliography('WoS_title_screened_2021.bib')
+# Screen by abstract and filter by excluded, as assessed by the criteria above.
 
-WoS_subset <- WoS_title_screened[WoS_title_screened$screened_titles != 'excluded',]
+search_abstract_screened <- screen_abstracts(search_title_screened_subset)
 
-WoS_abstract_screened <- screen_abstracts(WoS_subset)
+search_abstract_screened_subset <- search_abstract_screened[search_abstract_screened$screened_abstracts != 'excluded',]
 
-#write_bibliography(WoS_abstract_screened, 'WoS_abstract_screened_2021.bib', format = 'bib')
+# Select final collection of titles for textual review and export to .csv. 
 
-WoS_abstract_screened_2021 <- read_bibliography('WoS_abstract_screened_2021.bib')
+search_abstract_screened_final <- search_abstract_screened_subset %>% select(title)
 
-WoS_abstract_screened_subset <- WoS_abstract_screened_2021[WoS_abstract_screened_2021$screened_abstracts != 'excluded',]
-
-WoS_titles <- WoS_abstract_screened_subset %>% select(title)
-
-#
-
-ASFA_title_screened <- screen_titles(ASFA_unique)
-
-#write_bibliography(ASFA_title_screened, 'ASFA_title_screened.bib', format = 'bib')
-
-ASFA_title_screened <- read_bibliography('ASFA_title_screened.bib')
-
-ASFA_subset<- ASFA_title_screened[ASFA_title_screened$screened_titles != 'excluded',]
-
-ASFA_abstract_screened <- screen_abstracts(ASFA_subset)
-
-#write_bibliography(ASFA_abstract_screened, 'ASFA_abstract_screened.bib', format = 'bib')
-
-ASFA_abstract_screened <- read_bibliography('ASFA_abstract_screened_2021.bib')
-
-# Note: Minor difference in formatting between WoS and ASFA, column is 'screened_abstracts' not
-# 'abstract_screened'. Unknown why it's different.
-
-ASFA_abstract_screened_subset <- ASFA_abstract_screened[ASFA_abstract_screened$screened_abstracts != 'excluded',]
-
-# 5.) Concatenate final list of papers from ASFA and WoS, filter for duplicates and retrieve 
-# records for final review list.
-
-ASFA_titles <- ASFA_abstract_screened_subset %>% select(title)
-
-WoS_titles <- WoS_abstract_screened_subset %>% select(title)
-
-titles_comb <- rbind(WoS_titles, ASFA_titles)
-
-titles_unique <- unique(titles_comb)
-
-write.csv(titles_unique, 'title_review.csv')
+write.csv(search_abstract_screened_final, 'title_review.csv')
